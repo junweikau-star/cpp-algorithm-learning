@@ -14,6 +14,7 @@
 - `graph/bfs/`：BFS 程式、筆記與學習反思
 - `graph/dfs/`：DFS 程式、筆記與學習反思
 - `dynamic-programming/`：DP 程式、筆記與學習反思
+- `graph/dijkstra/`：Priority queue、Dijkstra 程式、筆記與學習反思
 
 ## 已完成主題
 
@@ -47,6 +48,16 @@
 
 詳細內容請參考 [DP 學習紀錄](dynamic-programming/README.md)。
 
+### Dijkstra
+
+- Priority queue 最大堆與最小堆
+- 一般非負加權圖最短路徑
+- 過期狀態判斷與路徑還原
+- 加權網格 Dijkstra
+- 通行券狀態擴充 Dijkstra
+
+詳細內容請參考 [Dijkstra 學習紀錄](graph/dijkstra/README.md)。
+
 ## 學習方式
 
 每個主題會依序進行：
@@ -59,6 +70,9 @@
 
 ## 下一步
 
-- 練習自行辨認題目的 DP 狀態與轉移
-- 加強邊界條件、資料範圍與複雜度分析
-- 嘗試結合圖論、樹與 DP 的綜合題目
+## 下一步
+
+- 學習拓撲排序
+- 練習 DAG 上的動態規劃
+- 加強獨立辨認演算法與狀態設計
+- 嘗試圖論與 DP 的綜合題目
