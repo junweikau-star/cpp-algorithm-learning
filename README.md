@@ -1,6 +1,6 @@
 # C++ Algorithm Learning Journey
 
-這個 repository 記錄我使用 C++ 學習競技程式設計演算法的過程，包含觀念筆記、練習程式、除錯經驗與學習反思。
+這個 repository 記錄我使用 C++ 學習競技程式設計演算法的過程，包含觀念筆記、練習程式、除錯經驗與學習反思，並將部分演算法翻譯成 JavaScript 製作互動視覺化。
 
 ## 學習目標
 
@@ -9,12 +9,17 @@
 3. 練習分析時間與空間複雜度
 4. 透過 GitHub 保存可驗證的學習歷程
 
+## 代表成果
+
+- [BFS 與 Dijkstra 加權網格視覺化](visualizer/README.md)：使用同一張加權網格，比較最少步數與最小總成本的路徑差異。
+
 ## 專案結構
 
 - `graph/bfs/`：BFS 程式、筆記與學習反思
 - `graph/dfs/`：DFS 程式、筆記與學習反思
 - `dynamic-programming/`：DP 程式、筆記與學習反思
 - `graph/dijkstra/`：Priority queue、Dijkstra 程式、筆記與學習反思
+- `visualizer/`：BFS 與 Dijkstra 加權網格視覺化
 
 ## 已完成主題
 
@@ -67,8 +72,7 @@
 3. 自己完成 C++ 實作
 4. 使用測試資料驗證
 5. 記錄錯誤、修正原因與反思
-
-## 下一步
+6. 將部分演算法翻譯成 JavaScript，透過動畫比較演算法行為
 
 ## 下一步
 
