@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BFS vs Dijkstra｜加權網格視覺化</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #07111f;
+      --panel: rgba(14, 28, 47, 0.88);
+      --panel-border: rgba(148, 163, 184, 0.2);
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --accent: #38bdf8;
+      --accent-strong: #0284c7;
+      --visited: #7dd3fc;
+      --path: #fb923c;
+      --start: #22c55e;
+      --target: #e879f9;
+      --wall: #111827;
+      --cell: #e2e8f0;
+      --grid-line: #64748b;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      padding: 32px 18px;
+      color: var(--text);
+      font-family: Inter, "Noto Sans TC", "Microsoft JhengHei", system-ui, sans-serif;
+      background:
+        radial-gradient(circle at 15% 10%, rgba(14, 165, 233, 0.2), transparent 30%),
+        radial-gradient(circle at 90% 90%, rgba(249, 115, 22, 0.14), transparent 34%),
+        var(--bg);
+    }
+
+    main {
+      width: min(1120px, 100%);
+      margin: 0 auto;
+    }
+
+    header {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 24px;
+      margin-bottom: 22px;
+    }
+
+    .eyebrow {
+      margin: 0 0 8px;
+      color: var(--accent);
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(2rem, 5vw, 3.7rem);
+      line-height: 0.98;
+      letter-spacing: -0.045em;
+    }
+
+    .subtitle {
+      max-width: 640px;
+      margin: 14px 0 0;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    .badge {
+      flex: none;
+      padding: 9px 13px;
+      border: 1px solid rgba(56, 189, 248, 0.36);
+      border-radius: 999px;
+      color: #bae6fd;
+      background: rgba(14, 165, 233, 0.1);
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 300px;
+      gap: 20px;
+      align-items: start;
+    }
+
+    .canvas-card,
+    .control-card {
+      border: 1px solid var(--panel-border);
+      border-radius: 22px;
+      background: var(--panel);
+      box-shadow: 0 24px 70px rgba(0, 0, 0, 0.28);
+      backdrop-filter: blur(16px);
+    }
+
+    .canvas-card {
+      padding: 18px;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: auto;
+      border-radius: 14px;
+      background: #cbd5e1;
+    }
+
+    .control-card {
+      padding: 20px;
+    }
+
+    .control-card h2 {
+      margin: 0 0 6px;
+      font-size: 1.05rem;
+    }
+
+    .control-card>p {
+      margin: 0 0 18px;
+      color: var(--muted);
+      font-size: 0.9rem;
+      line-height: 1.55;
+    }
+
+    .controls {
+      display: grid;
+      gap: 10px;
+    }
+
+    button {
+      width: 100%;
+      min-height: 46px;
+      border: 0;
+      border-radius: 12px;
+      color: #f8fafc;
+      font: inherit;
+      font-weight: 800;
+      cursor: pointer;
+      transition: transform 150ms ease, filter 150ms ease, opacity 150ms ease;
+    }
+
+    button:hover:not(:disabled) {
+      transform: translateY(-1px);
+      filter: brightness(1.08);
+    }
+
+    button:focus-visible {
+      outline: 3px solid rgba(125, 211, 252, 0.55);
+      outline-offset: 3px;
+    }
+
+    button:disabled {
+      cursor: wait;
+      opacity: 0.55;
+    }
+
+    #bfsButton {
+      background: linear-gradient(135deg, #0369a1, #0ea5e9);
+    }
+
+    #dijkstraButton {
+      background: linear-gradient(135deg, #c2410c, #f97316);
+    }
+
+    #resetButton {
+      border: 1px solid rgba(148, 163, 184, 0.26);
+      color: #cbd5e1;
+      background: rgba(30, 41, 59, 0.75);
+    }
+
+    .status {
+      min-height: 92px;
+      margin-top: 16px;
+      padding: 14px;
+      border: 1px solid rgba(148, 163, 184, 0.16);
+      border-radius: 14px;
+      background: rgba(2, 6, 23, 0.45);
+    }
+
+    .status-label {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--muted);
+      font-size: 0.72rem;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    #statusText {
+      margin: 0;
+      line-height: 1.55;
+    }
+
+    #resultText {
+      margin: 7px 0 0;
+      color: #fdba74;
+      font-size: 1.12rem;
+      font-weight: 900;
+    }
+
+    .legend {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #cbd5e1;
+      font-size: 0.82rem;
+    }
+
+    .swatch {
+      width: 15px;
+      height: 15px;
+      border-radius: 4px;
+      border: 1px solid rgba(255, 255, 255, 0.28);
+    }
+
+    .notes {
+      margin-top: 18px;
+      padding-top: 16px;
+      border-top: 1px solid rgba(148, 163, 184, 0.14);
+      color: var(--muted);
+      font-size: 0.8rem;
+      line-height: 1.65;
+    }
+
+    @media (max-width: 820px) {
+      header {
+        align-items: start;
+        flex-direction: column;
+      }
+
+      .workspace {
+        grid-template-columns: 1fr;
+      }
+
+      .control-card {
+        order: -1;
+      }
+
+      .controls {
+        grid-template-columns: 1fr 1fr 1fr;
+      }
+    }
+
+    @media (max-width: 560px) {
+      body {
+        padding: 20px 12px;
+      }
+
+      .canvas-card,
+      .control-card {
+        border-radius: 16px;
+      }
+
+      .canvas-card {
+        padding: 10px;
+      }
+
+      .controls {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main>
+    <header>
+      <div>
+        <p class="eyebrow">Shortest Path Lab</p>
+        <h1>BFS vs Dijkstra</h1>
+        <p class="subtitle">
+          在同一張加權網格上觀察兩種搜尋方式。淺藍色代表拜訪順序，橘色代表最後找到的路徑。
+        </p>
+      </div>
+      <div class="badge">10 × 10 加權網格</div>
+    </header>
+
+    <section class="workspace">
+      <div class="canvas-card">
+        <canvas id="gridCanvas" width="720" height="720" role="img" aria-label="10 乘 10 的加權網格，包含起點、終點與牆壁"></canvas>
+      </div>
+
+      <aside class="control-card">
+        <h2>動畫控制</h2>
+        <p>選擇演算法後，播放器會依函式回傳的順序播放結果。</p>
+
+        <div class="controls">
+          <button id="bfsButton" type="button">執行 BFS</button>
+          <button id="dijkstraButton" type="button">執行 Dijkstra</button>
+          <button id="resetButton" type="button">重設</button>
+        </div>
+
+        <div class="status" aria-live="polite">
+          <span class="status-label">目前狀態</span>
+          <p id="statusText">等待選擇演算法。</p>
+          <p id="resultText"></p>
+        </div>
+
+        <div class="legend" aria-label="顏色圖例">
+          <div class="legend-item"><span class="swatch" style="background: var(--start)"></span>起點 S</div>
+          <div class="legend-item"><span class="swatch" style="background: var(--target)"></span>終點 T</div>
+          <div class="legend-item"><span class="swatch" style="background: var(--visited)"></span>已拜訪</div>
+          <div class="legend-item"><span class="swatch" style="background: var(--path)"></span>最終路徑</div>
+          <div class="legend-item"><span class="swatch" style="background: var(--wall)"></span>牆壁</div>
+          <div class="legend-item"><span class="swatch" style="background: var(--cell)"></span>權重格</div>
+        </div>
+
+        <p class="notes">
+          BFS 的 cost 可表示步數；Dijkstra 的 cost 可表示累積權重。演算法函式只負責產生資料，畫面與動畫由播放器處理。
+        </p>
+      </aside>
+    </section>
+  </main>
+
+  <script>
+    // -1 代表牆壁；其他數字代表進入該格需要支付的權重。
+    const grid = [
+      [1, 8, 8, 8, 2, 2, 2, 2, 2, 2],
+      [1, -1, -1, 8, 2, -1, -1, -1, -1, 2],
+      [1, 1, 1, 8, 2, 2, 2, 2, -1, 2],
+      [9, 9, 1, 8, -1, -1, -1, 2, -1, 2],
+      [9, -1, 1, 1, 1, 1, -1, 2, 2, 2],
+      [9, -1, -1, -1, -1, 1, -1, -1, -1, 1],
+      [9, 9, 9, 9, -1, 1, 1, 1, 1, 1],
+      [-1, -1, -1, 9, -1, -1, -1, -1, -1, 1],
+      [1, 1, 1, 9, 9, 9, 9, 9, 9, 1],
+      [1, -1, 1, 1, 1, 1, 1, 1, 1, 1]
+    ];
+
+    const start = [0, 0];
+    const target = [9, 9];
+    const animationDelay = 150;
+
+    const canvas = document.getElementById("gridCanvas");
+    const context = canvas.getContext("2d");
+    const statusText = document.getElementById("statusText");
+    const resultText = document.getElementById("resultText");
+    const bfsButton = document.getElementById("bfsButton");
+    const dijkstraButton = document.getElementById("dijkstraButton");
+    const resetButton = document.getElementById("resetButton");
+
+    const rows = grid.length;
+    const columns = grid[0].length;
+    const cellWidth = canvas.width / columns;
+    const cellHeight = canvas.height / rows;
+
+    let visitedCells = new Set();
+    let pathCells = new Set();
+    let animationToken = 0;
+
+    // 將 [r,c] 轉成 Set 可以使用的唯一字串。
+    function coordinateKey(r, c) {
+      return `${r},${c}`;
+    }
+
+    // 判斷某格是否為指定座標。
+    function isSameCoordinate(r, c, coordinate) {
+      return r === coordinate[0] && c === coordinate[1];
+    }
+
+    // 根據格子的種類與動畫狀態決定底色。
+    function getCellColor(r, c) {
+      if (grid[r][c] === -1) return "#111827";
+      if (isSameCoordinate(r, c, start)) return "#22c55e";
+      if (isSameCoordinate(r, c, target)) return "#e879f9";
+      if (pathCells.has(coordinateKey(r, c))) return "#fb923c";
+      if (visitedCells.has(coordinateKey(r, c))) return "#7dd3fc";
+      return "#e2e8f0";
+    }
+
+    // 依目前狀態重新繪製整張網格。
+    function drawGrid() {
+      context.clearRect(0, 0, canvas.width, canvas.height);
+      context.textAlign = "center";
+      context.textBaseline = "middle";
+      context.font = `700 ${Math.floor(cellHeight * 0.3)}px "Microsoft JhengHei", sans-serif`;
+
+      for (let r = 0; r < rows; r += 1) {
+        for (let c = 0; c < columns; c += 1) {
+          const x = c * cellWidth;
+          const y = r * cellHeight;
+
+          context.fillStyle = getCellColor(r, c);
+          context.fillRect(x, y, cellWidth, cellHeight);
+
+          context.strokeStyle = "#64748b";
+          context.lineWidth = 1.4;
+          context.strokeRect(x, y, cellWidth, cellHeight);
+
+          if (grid[r][c] === -1) continue;
+
+          let label = String(grid[r][c]);
+          if (isSameCoordinate(r, c, start)) label = "S";
+          if (isSameCoordinate(r, c, target)) label = "T";
+
+          context.fillStyle = "#0f172a";
+          context.fillText(label, x + cellWidth / 2, y + cellHeight / 2);
+        }
+      }
+    }
+
+    // 暫停指定毫秒數，讓拜訪順序可以逐格播放。
+    function wait(milliseconds) {
+      return new Promise((resolve) => setTimeout(resolve, milliseconds));
+    }
+
+    // 清除畫面狀態；token 會讓正在播放的舊動畫停止。
+    function resetVisualizer(message = "等待選擇演算法。") {
+      animationToken += 1;
+      visitedCells = new Set();
+      pathCells = new Set();
+      statusText.textContent = message;
+      resultText.textContent = "";
+      setButtonsDisabled(false);
+      drawGrid();
+    }
+
+    function setButtonsDisabled(disabled) {
+      bfsButton.disabled = disabled;
+      dijkstraButton.disabled = disabled;
+    }
+
+    // 檢查函式回傳的外觀是否符合播放器需要的介面。
+    function validateResult(result) {
+      return result
+        && Array.isArray(result.visitOrder)
+        && Array.isArray(result.path)
+        && (typeof result.cost === "number" || result.cost === null);
+    }
+
+    // 播放演算法提供的拜訪順序，最後一次顯示完整路徑。
+    async function animateResult(result, algorithmName, token) {
+      for (const [r, c] of result.visitOrder) {
+        if (token !== animationToken) return;
+        visitedCells.add(coordinateKey(r, c));
+        drawGrid();
+        await wait(animationDelay);
+      }
+
+      if (token !== animationToken) return;
+
+      pathCells = new Set(result.path.map(([r, c]) => coordinateKey(r, c)));
+      drawGrid();
+
+      statusText.textContent = `${algorithmName} 播放完成，共拜訪 ${result.visitOrder.length} 格。`;
+      const resultLabel = algorithmName === "BFS" ? "步數" : "總成本";
+      resultText.textContent = `${resultLabel}：${result.cost}`;
+      setButtonsDisabled(false);
+    }
+
+    // 呼叫指定演算法，播放器只消費回傳資料，不參與搜尋邏輯。
+    async function executeAlgorithm(algorithmName, algorithmFunction) {
+      resetVisualizer(`${algorithmName} 準備執行…`);
+      setButtonsDisabled(true);
+      const token = animationToken;
+
+      let result;
+      try {
+        result = algorithmFunction(grid, start, target);
+      } catch (error) {
+        statusText.textContent = `${algorithmName} 執行時發生錯誤：${error.message}`;
+        setButtonsDisabled(false);
+        return;
+      }
+
+      if (!validateResult(result)) {
+        statusText.textContent = `${algorithmName} 的回傳格式不符合播放器介面。`;
+        setButtonsDisabled(false);
+        return;
+      }
+
+      if (result.visitOrder.length === 0 && result.path.length === 0 && result.cost === null) {
+        statusText.textContent = `${algorithmName} 尚未實作。請完成對應的 TODO 函式。`;
+        setButtonsDisabled(false);
+        return;
+      }
+
+      statusText.textContent = `${algorithmName} 動畫播放中…`;
+      await animateResult(result, algorithmName, token);
+    }
+
+    // TODO（由學生實作）：將自己的 BFS 邏輯翻譯成 JavaScript。
+    function runBFS(grid, start, target) {
+      const H = grid.length;
+      const W = grid[0].length;
+
+      const queue = [];
+
+      const dist = Array.from(
+        {length: H},
+        () => Array(W).fill(-1)
+      );
+
+      const parent = Array.from(
+        {length: H},
+        () => Array(W).fill(null)
+      );
+
+      const visitOrder = [];
+
+      const [sr, sc] = start;
+
+      dist[sr][sc] = 0;
+      queue.push([sr, sc]);
+
+      const dr = [-1, 1, 0, 0];
+      const dc = [0, 0, -1, 1];
+
+      const [tr, tc] = target;
+
+      while (queue.length > 0) {
+        const [r, c] = queue.shift();
+
+        visitOrder.push([r, c]);
+
+        if (r === tr && c === tc) {
+          break;
+        }
+
+        for (let k = 0; k < 4; k++) {
+          const nr = r + dr[k];
+          const nc = c + dc[k];
+
+          if (nr < 0 || nr >= H || nc < 0 || nc >= W) {
+            continue;
+          }
+          if (grid[nr][nc] === -1) {
+            continue;
+          }
+
+          if (dist[nr][nc] !== -1) {
+            continue;
+          }
+          dist[nr][nc] = dist[r][c] + 1;
+          parent[nr][nc] = [r, c];
+          queue.push([nr, nc]);
+
+        }
+
+
+
+      }
+
+
+
+
+      // 回傳格式範例：
+      if (dist[tr][tc] === -1) {
+        return {
+          visitOrder: visitOrder,
+          path: [],
+          cost: -1
+        };
+      } else {
+        const path = [];
+        let r = tr;
+        let c = tc;
+
+        while (r !== sr || c !== sc) {
+          path.push([r, c]);
+
+          const previous = parent[r][c];
+          r = previous[0];
+          c = previous[1];
+        }
+
+        path.push([sr, sc]);
+        path.reverse();
+
+        return {
+          visitOrder,
+          path,
+          cost: dist[tr][tc]
+        };
+
+      }
+    }
+
+    // TODO（由學生實作）：將自己的 Dijkstra 邏輯翻譯成 JavaScript。
+    function runDijkstra(grid, start, target) {
+      const H = grid.length;
+      const W = grid[0].length;
+
+      const parent = Array.from(
+        {length: H},
+        () => Array(W).fill(null)
+      );
+
+      const visitOrder = [];
+      const [sr, sc] = start;
+
+
+      const dist = Array.from(
+        {length: H},
+        () => Array(W).fill(Infinity)
+      );
+
+      const candidates = [];
+
+      dist[sr][sc] = 0;
+      candidates.push([0, sr, sc]);
+
+      const [tr, tc] = target;
+
+      const dr = [-1, 1, 0, 0];
+      const dc = [0, 0, -1, 1];
+
+      while (candidates.length > 0) {
+
+        let bestIndex = 0;
+
+        for (let i = 1; i < candidates.length; i++) {
+          if (candidates[i][0] < candidates[bestIndex][0]) {
+            bestIndex = i;
+          }
+        }
+
+        const [d, r, c] = candidates[bestIndex];
+        candidates.splice(bestIndex, 1);
+
+        if (d > dist[r][c]) {
+          continue;
+        }
+
+        visitOrder.push([r, c]);
+
+        if (r === tr && c === tc) {
+          break;
+        }
+
+
+
+        for (let k = 0; k < 4; k++) {
+          const nr = r + dr[k];
+          const nc = c + dc[k];
+
+          if (nr < 0 || nr >= H || nc < 0 || nc >= W) {
+            continue;
+          }
+          if (grid[nr][nc] === -1) {
+            continue;
+          }
+
+
+          const newDist = d + grid[nr][nc];
+
+          if (newDist < dist[nr][nc]) {
+            dist[nr][nc] = newDist;
+            parent[nr][nc] = [r, c];
+            candidates.push([newDist, nr, nc]);
+          }
+
+        }
+
+
+
+      }
+      // 回傳格式範例：
+      if (dist[tr][tc] === Infinity) {
+        return {
+          visitOrder: visitOrder,
+          path: [],
+          cost: -1
+        };
+      } else {
+        const path = [];
+        let r = tr;
+        let c = tc;
+
+        while (r !== sr || c !== sc) {
+          path.push([r, c]);
+
+          const previous = parent[r][c];
+          r = previous[0];
+          c = previous[1];
+        }
+
+        path.push([sr, sc]);
+        path.reverse();
+
+        return {
+          visitOrder,
+          path,
+          cost: dist[tr][tc]
+        };
+
+      }
+
+    }
+
+    bfsButton.addEventListener("click", () => executeAlgorithm("BFS", runBFS));
+    dijkstraButton.addEventListener("click", () => executeAlgorithm("Dijkstra", runDijkstra));
+    resetButton.addEventListener("click", () => resetVisualizer());
+
+    drawGrid();
+  </script>
+</body>
+
+</html>
